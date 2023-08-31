@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Record</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: #333;
+            color: white;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        h1, h2 {
+            text-align: center;
+            margin: 1rem 0;
+        }
+
+        form {
+            width: 100%;
+            max-width: 600px;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        label {
+            display: block;
+            margin-top: 10px;
+        }
+
+        select, input[type="submit"] {
+            width: 100%;
+            padding: 10px;
+            margin-top: 5px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+        }
+
+        .preview-container {
+            display: flex;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .preview-image {
+            max-width: 100px;
+            margin-right: 10px;
+        }
+
+        .popup {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.7);
+        }
+
+        .popup-content {
+            display: block;
+            margin: auto;
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            max-width: 80%;
+            border-radius: 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .close-popup {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            color: #888;
+            cursor: pointer;
+        }
+
+        .popup img {
+            max-width: 100px;
+            margin: 5px;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .popup img:hover {
+            transform: scale(1.1);
+        }
+
+        footer {
+            background-color: #f9f9f9;
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .image-with-button {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 10px;
+        }
+
+        .preview-image {
+            max-width: 100px;
+            margin-right: 10px;
+        }
+
+        .select-button {
+            margin-top: 5px;
+        }
+
+        select {
+            width: 15%;
+            max-width: 15%;
+            margin-top: 20px;
+        }
+
+        select option[value="勝"], select option[value="敗"] {
+            font-size: 25px;
+        }
+    </style>
+</head>
+<body>
+<body>
+    <header>
+        <h1>Record</h1>
+    </header>
+    
+    <form method="POST" action="/" id="record_form">
+        <!-- ユーザーカード選択部分 -->
+        <label for="user_profile">リーダーカード</label>
+        <div id="selected_preview" class="image-with-button">
+            <img src="" alt="" class="preview-image">
+            <button id="open_popup_button" type="button" class="select-button">select</button>
+        </div>
+        <input type="hidden" id="selected_profile" name="user_profile" value="">
+        
+        <div id="image_popup" class="popup">
+            <div class="popup-content">
+                <span class="close-popup">&times;</span>
+                <h2>select</h2>
+                {% for profile in user_profiles %}
+                    <img src="{{ url_for('static', filename='images/') }}{{ profile }}" alt="{{ profile }}" class="selectable-image">
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- 相手カード選択部分 -->
+        <label for="opponent_name">相手のリーダーカード</label>
+        <div id="opponent_preview" class="image-with-button">
+            <img src="" alt="" class="preview-image">
+            <button id="open_opponent_popup_button" type="button" class="select-button">select</button>
+        </div>
+        <input type="hidden" id="selected_opponent_profile" name="opponent_profile" value="">
+        
+        <div id="opponent_popup" class="popup">
+            <div class="popup-content">
+                <span class="close-popup close-opponent-popup">&times;</span>
+                <h2>select</h2>
+                {% for profile in opponent_profiles %}
+                    <img src="{{ url_for('static', filename='images/') }}{{ profile }}" alt="{{ profile }}" class="selectable-opponent-image">
+                {% endfor %}
+            </div>
+        </div>   
+
+        <label for="choice">先攻/後攻:</label>
+        <select name="choice" required>
+            <option value="先攻">先攻</option>
+            <option value="後攻">後攻</option>
+        </select><br>
+        
+        <label for="result">結果:</label>
+        <select name="result" required>
+            <option value="勝">勝</option>
+            <option value="敗">敗</option>
+        </select><br>
+        
+        <input type="submit" value="記録">
+    </form>
+    
+    <h2>戦績</h2>
+    <p>対戦回数: {{ total_matches }}</p>
+    <p>勝: {{ wins }}, 敗: {{ losses }}</p>
+    <p>勝率: {{ win_rate }}%</p>
+    <a href="/history">全体記録</a>
+
+    <footer>
+        &copy; 2023 Record App
+    </footer>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const openPopupButton = document.getElementById('open_popup_button');
+            const imagePopup = document.getElementById('image_popup');
+            const closePopup = document.querySelector('.close-popup');
+            const selectableImages = document.querySelectorAll('.selectable-image');
+            const selectedProfileInput = document.getElementById('selected_profile');
+            const selectedPreview = document.querySelector('#selected_preview img');
+            
+            const openOpponentPopupButton = document.getElementById('open_opponent_popup_button');
+            const opponentPopup = document.getElementById('opponent_popup');
+            const closeOpponentPopup = document.querySelector('.close-opponent-popup');
+            const selectableOpponentImages = document.querySelectorAll('.selectable-opponent-image');
+            const selectedOpponentProfileInput = document.getElementById('selected_opponent_profile');
+            const opponentPreview = document.querySelector('#opponent_preview img');
+    
+            openPopupButton.addEventListener('click', function() {
+                imagePopup.style.display = 'block';
+            });
+    
+            closePopup.addEventListener('click', function() {
+                imagePopup.style.display = 'none';
+            });
+    
+            window.addEventListener('click', function(event) {
+                if (event.target === imagePopup) {
+                    imagePopup.style.display = 'none';
+                }
+            });
+    
+            selectableImages.forEach(function(image) {
+                image.addEventListener('click', function() {
+                    const selectedProfile = image.alt;
+                    selectedProfileInput.value = selectedProfile;
+                    openPopupButton.textContent = `select`;
+                    selectedPreview.src = image.src;
+                    imagePopup.style.display = 'none';
+                });
+            });
+    
+            openOpponentPopupButton.addEventListener('click', function() {
+                opponentPopup.style.display = 'block';
+            });
+    
+            closeOpponentPopup.addEventListener('click', function() {
+                opponentPopup.style.display = 'none';
+            });
+    
+            window.addEventListener('click', function(event) {
+                if (event.target === opponentPopup) {
+                    opponentPopup.style.display = 'none';
+                }
+            });
+    
+            // ユーザーカード選択
+selectableImages.forEach(function(image) {
+    image.addEventListener('click', function() {
+        const selectedProfile = image.alt;
+        selectedProfileInput.value = selectedProfile;
+        openPopupButton.textContent = `select`;
+        selectedPreview.src = image.src;
+
+        // 選択されたイメージのスタイルを変更
+        selectedPreview.style.width = '50%';
+        selectedPreview.style.maxWidth = '200px';
+
+        imagePopup.style.display = 'none';
+    });
+});
+
+// 相手カード選択
+selectableOpponentImages.forEach(function(image) {
+    image.addEventListener('click', function() {
+        const selectedOpponentProfile = image.alt;
+        selectedOpponentProfileInput.value = selectedOpponentProfile;
+        openOpponentPopupButton.textContent = `select`;
+        opponentPreview.src = image.src;
+
+        // 選択されたイメージのスタイルを変更
+        opponentPreview.style.width = '50%';
+        opponentPreview.style.maxWidth = '200px';
+
+        opponentPreview.classList.add('selected');
+        opponentPopup.style.display = 'none';
+    });
+});
+
+
+            const recordForm = document.getElementById('record_form');
+            recordForm.addEventListener('submit', function(event) {
+                const selectedProfile = selectedProfileInput.value;
+                const selectedImage = document.querySelector(`.selectable-image[alt="${selectedProfile}"]`);
+                selectedImage.classList.add('selected');
+            });
+
+            if (selectedProfileInput.value !== "") {
+                const selectedProfile = selectedProfileInput.value;
+                const selectedImage = document.querySelector(`.selectable-image[alt="${selectedProfile}"]`);
+                selectedImage.classList.add('selected');
+            }
+        });
+    </script>
+</body>
+</html>
